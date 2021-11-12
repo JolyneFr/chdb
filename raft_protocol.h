@@ -20,7 +20,10 @@ enum raft_rpc_status {
 
 class request_vote_args {
 public:
-    // Your code here
+    int term;
+    int candidate_id;
+    int last_log_idx;
+    int last_log_term;
 };
 
 marshall& operator<<(marshall &m, const request_vote_args& args);
@@ -29,7 +32,8 @@ unmarshall& operator>>(unmarshall &u, request_vote_args& args);
 
 class request_vote_reply {
 public:
-    // Your code here
+    int term;
+    bool vote_granted;
 };
 
 marshall& operator<<(marshall &m, const request_vote_reply& reply);
@@ -38,42 +42,51 @@ unmarshall& operator>>(unmarshall &u, request_vote_reply& reply);
 template<typename command>
 class log_entry {
 public:
-    // Your code here
+    int term;
+    command cmd;
 };
 
 template<typename command>
 marshall& operator<<(marshall &m, const log_entry<command>& entry) {
-    // Your code here
+    m << entry.term << entry.cmd;
     return m;
 }
 
 template<typename command>
 unmarshall& operator>>(unmarshall &u, log_entry<command>& entry) {
-    // Your code here
+    u >> entry.term >> entry.cmd;
     return u;
 }
 
 template<typename command>
 class append_entries_args {
 public:
-    // Your code here
+    int term;
+    int leader_id;
+    int prev_log_idx;
+    int prev_log_term;
+    std::vector<log_entry<command>> entries;
+    int leader_commit;
 };
 
 template<typename command>
 marshall& operator<<(marshall &m, const append_entries_args<command>& args) {
-    // Your code here
+    m << args.term << args.leader_id << args.prev_log_idx 
+        << args.prev_log_term << args.entries << args.leader_commit;
     return m;
 }
 
 template<typename command>
 unmarshall& operator>>(unmarshall &u, append_entries_args<command>& args) {
-    // Your code here
+    u >> args.term >> args.leader_id >> args.prev_log_idx 
+        >> args.prev_log_term >> args.entries >> args.leader_commit;
     return u;
 }
 
 class append_entries_reply {
 public:
-    // Your code here
+    int term;
+    bool success;
 };
 
 marshall& operator<<(marshall &m, const append_entries_reply& reply);

@@ -36,8 +36,10 @@ private:
 
 	mutex mtx;
 
-	long completedMapCount;
-	long completedReduceCount;
+	unsigned long assignedMapCount;
+	unsigned long assignedReduceCount;
+	unsigned long completedMapCount;
+	unsigned long completedReduceCount;
 	bool isFinished;
 	
 	string getFile(int index);
@@ -48,13 +50,74 @@ private:
 
 mr_protocol::status Coordinator::askTask(int, mr_protocol::AskTaskResponse &reply) {
 	// Lab2 : Your code goes here.
+	this->mtx.lock();
+	// printf("ask: %ld %ld\n", assignedMapCount ,assignedReduceCount);
+	if (assignedMapCount < mapTasks.size()) {
+		/* assign map task */
+		for (Task &task : mapTasks) {
+			if (!task.isAssigned) {
+				task.isAssigned = true;
+				assignedMapCount++;
+				reply = mr_protocol::AskTaskResponse {
+					.taskType = mr_tasktype::MAP,
+					.index = task.index,
+					.filename = files[task.index]
+				};
+				goto release;
+			}
+		}
+	} else if (completedMapCount == mapTasks.size() && 
+			   assignedReduceCount < reduceTasks.size()) {
+		/* assign reduce task */
+		for (Task &task : reduceTasks) {
+			if (!task.isAssigned) {
+				task.isAssigned = true;
+				assignedReduceCount++;
+				reply = mr_protocol::AskTaskResponse {
+					.taskType = mr_tasktype::REDUCE,
+					.index = task.index,
+					.filename = ""
+				};
+				goto release;
+			}
+		}
+	} else {
+		/* nothing to assign */
+		reply = mr_protocol::AskTaskResponse {
+			.taskType = mr_tasktype::NONE,
+			.index = 0,
+			.filename = ""
+		};
+	}
 
+release:
+	this->mtx.unlock();
 	return mr_protocol::OK;
 }
 
 mr_protocol::status Coordinator::submitTask(int taskType, int index, bool &success) {
 	// Lab2 : Your code goes here.
+	this->mtx.lock();
+	switch (taskType) {
+		case mr_tasktype::MAP: {
+			mapTasks[index].isCompleted = true;
+			completedMapCount++;
+			success = true;
+			goto release;
+		}
+		case mr_tasktype::REDUCE: {
+			reduceTasks[index].isCompleted = true;
+			completedReduceCount++;
+			success = true;
+			if (completedReduceCount == reduceTasks.size()) {
+				isFinished = true;
+			}
+			goto release;
+		}
+	}
 
+release:
+	this->mtx.unlock();
 	return mr_protocol::OK;
 }
 
@@ -68,7 +131,7 @@ string Coordinator::getFile(int index) {
 bool Coordinator::isFinishedMap() {
 	bool isFinished = false;
 	this->mtx.lock();
-	if (this->completedMapCount >= long(this->mapTasks.size())) {
+	if (this->completedMapCount == this->mapTasks.size()) {
 		isFinished = true;
 	}
 	this->mtx.unlock();
@@ -78,7 +141,7 @@ bool Coordinator::isFinishedMap() {
 bool Coordinator::isFinishedReduce() {
 	bool isFinished = false;
 	this->mtx.lock();
-	if (this->completedReduceCount >= long(this->reduceTasks.size())) {
+	if (this->completedReduceCount == this->reduceTasks.size()) {
 		isFinished = true;
 	}
 	this->mtx.unlock();
@@ -107,6 +170,8 @@ Coordinator::Coordinator(const vector<string> &files, int nReduce)
 	this->isFinished = false;
 	this->completedMapCount = 0;
 	this->completedReduceCount = 0;
+	this->assignedMapCount = 0;
+	this->assignedReduceCount = 0;
 
 	int filesize = files.size();
 	for (int i = 0; i < filesize; i++) {
@@ -149,6 +214,8 @@ int main(int argc, char *argv[])
 	// Lab2: Your code here.
 	// Hints: Register "askTask" and "submitTask" as RPC handlers here
 	// 
+	server.reg(mr_protocol::asktask, &c, &Coordinator::askTask);
+	server.reg(mr_protocol::submittask, &c, &Coordinator::submitTask);
 
 	while(!c.Done()) {
 		sleep(1);

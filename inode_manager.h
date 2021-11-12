@@ -4,6 +4,7 @@
 #define inode_h
 
 #include <stdint.h>
+#include <bitset>
 #include "extent_protocol.h" // TODO: delete it
 
 #define DISK_SIZE  1024*1024*16
@@ -35,7 +36,7 @@ typedef struct superblock {
 class block_manager {
  private:
   disk *d;
-  std::map <uint32_t, int> using_blocks;
+  std::bitset<BLOCK_NUM> using_blocks;
  public:
   block_manager();
   struct superblock sb;
@@ -56,6 +57,9 @@ class block_manager {
 
 // Block containing inode i
 #define IBLOCK(i, nblocks)     ((nblocks)/BPB + (i)/IPB + 3)
+
+// First data block id
+#define DBLOCK_HEAD(nblocks)   (IBLOCK(INODE_NUM, nblocks) + 1)
 
 // Bitmap bits per block
 #define BPB           (BLOCK_SIZE*8)
@@ -81,6 +85,8 @@ class inode_manager {
   block_manager *bm;
   struct inode* get_inode(uint32_t inum);
   void put_inode(uint32_t inum, struct inode *ino);
+  blockid_t get_blockid(struct inode *ino, uint32_t n);
+  void alloc_inode_block(struct inode *ino, uint32_t n);
 
  public:
   inode_manager();

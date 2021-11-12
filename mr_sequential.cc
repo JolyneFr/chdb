@@ -28,7 +28,21 @@ vector<KeyVal> Map(const string &filename, const string &content)
 {
     // Your code goes here
     // Hints: split contents into an array of words.
+    static const string banList = string(",.;:'?!\n\t\"()-#&*@_[] 1234567890", 31);
+    vector<KeyVal> intermediate;
+    size_t head = 0, rear = 0;
 
+    rear = content.find_first_of(banList, head);
+    while (rear != string::npos) {
+        if (head != rear) {
+            string key = content.substr(head, rear - head);
+            intermediate.push_back({ .key = key, .val = "1" });
+        }
+        head = rear + 1;
+        rear = content.find_first_of(banList, head);
+    }
+
+    return intermediate;
 }
 
 //
@@ -40,7 +54,9 @@ string Reduce(const string &key, const vector <string> &values)
 {
     // Your code goes here
     // Hints: return the number of occurrences of the word.
-
+    ostringstream ost;
+    ost << values.size();
+    return ost.str();
 }
 
 int main(int argc, char ** argv)
