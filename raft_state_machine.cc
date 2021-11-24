@@ -65,11 +65,9 @@ void kv_state_machine::apply_log(raft_command &cmd) {
     kv_command &kv_cmd = dynamic_cast<kv_command&>(cmd);
     std::unique_lock<std::mutex> res_lock(kv_cmd.res->mtx);
     // Your code here:
-    printf("apply log type: %d, key: %s, value: %s\n", kv_cmd.cmd_tp, kv_cmd.key.c_str(), kv_cmd.value.c_str());
     kv_map::iterator find_itr = store.find(kv_cmd.key);
     switch (kv_cmd.cmd_tp) {
         case kv_command::CMD_GET: {
-            printf("get lv pair %s\n", kv_cmd.key.c_str());
             if (find_itr != store.end()) {
                 kv_cmd.res->value = find_itr->second;
                 kv_cmd.res->succ = true;
@@ -140,7 +138,6 @@ void kv_state_machine::apply_snapshot(const std::vector<char>& snapshot) {
     buf.seekg(0, std::ios::beg);
     int map_size;
     buf.read((char *)(&map_size), sizeof(int));
-    printf("apply snapshot size = %d\n", map_size);
 
     for (int idx = 0; idx < map_size; ++idx) {
         int key_size, value_size;
@@ -154,7 +151,6 @@ void kv_state_machine::apply_snapshot(const std::vector<char>& snapshot) {
         buf.read(&value[0], value_size);
 
         store.insert(std::make_pair(key, value));
-        printf("insert pair %s : %s\n", key.c_str(), value.c_str());
     }
 
 }

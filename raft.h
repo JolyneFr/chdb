@@ -346,7 +346,7 @@ bool raft<state_machine, command>::new_command(command cmd, int &term, int &inde
 template<typename state_machine, typename command>
 bool raft<state_machine, command>::save_snapshot() {
     // Your code here:
-    RAFT_LOG("directly save");
+    // RAFT_LOG("directly save");
     take_snapshot();
     return true;
 }
@@ -431,13 +431,13 @@ int raft<state_machine, command>::append_entries(append_entries_args<command> ar
     last_received_RPC_time = std::chrono::system_clock::now();
 
     /* checking log consistency */
-    RAFT_LOG("prev_log_idx = %d, last_included_idx = %d, physical = %ld, leader is %d, heartbeat? %ld", arg.prev_log_idx, snapshot.last_included_idx, physical_log.size(), arg.leader_id, arg.entries.size());
+    // RAFT_LOG("prev_log_idx = %d, last_included_idx = %d, physical = %ld, leader is %d, heartbeat? %ld", arg.prev_log_idx, snapshot.last_included_idx, physical_log.size(), arg.leader_id, arg.entries.size());
     if (last_log_idx() < arg.prev_log_idx || 
         arg.prev_log_idx < snapshot.last_included_idx || 
         logical_log_term(arg.prev_log_idx) != arg.prev_log_term) {
-        if (last_log_idx() >= arg.prev_log_idx) {
-            RAFT_LOG("term inconsistency: idx: %d, local: %d, arg: %d", arg.prev_log_idx, logical_log_term(arg.prev_log_idx), arg.prev_log_term);
-        }
+        // if (last_log_idx() >= arg.prev_log_idx) {
+        //     RAFT_LOG("term inconsistency: idx: %d, local: %d, arg: %d", arg.prev_log_idx, logical_log_term(arg.prev_log_idx), arg.prev_log_term);
+        // }
         reply.success = false;
         reply.term = current_term;
         return 0;
@@ -454,8 +454,6 @@ int raft<state_machine, command>::append_entries(append_entries_args<command> ar
         reply.term = current_term;
         return 0;
     }
-
-    RAFT_LOG("pass consistency check");
 
     int log_idx = arg.prev_log_idx + 1;
     auto new_log_itr = arg.entries.cbegin();
@@ -484,9 +482,6 @@ int raft<state_machine, command>::append_entries(append_entries_args<command> ar
         int last_new_entry_idx = last_log_idx();
         commit_idx = arg.leader_commit < last_new_entry_idx ? 
                     arg.leader_commit : last_new_entry_idx;
-    }
-    if (arg.prev_log_idx == 50) {
-        RAFT_LOG("after append, commit_idx is %d", commit_idx);
     }
 
     reply.success = true;
@@ -518,7 +513,7 @@ void raft<state_machine, command>::handle_append_entries_reply(int target, const
                 }
             } else {
                 /* match */
-                RAFT_LOG("append entries to target %d, old_last = %d, entries_size = %ld", target, arg.prev_log_idx, arg.entries.size());
+                // RAFT_LOG("append entries to target %d, old_last = %d, entries_size = %ld", target, arg.prev_log_idx, arg.entries.size());
                 int follower_last_log_idx = arg.prev_log_idx + arg.entries.size();
                 match_idx[target] = follower_last_log_idx;
                 next_idx[target] = follower_last_log_idx + 1;
@@ -539,7 +534,7 @@ int raft<state_machine, command>::install_snapshot(install_snapshot_args args, i
         return 0;
     }
 
-    RAFT_LOG("snapshot from leader %d, apply state to %d, last_included %d, pysical size %ld", args.leader_id, args.last_included_idx, snapshot.last_included_idx, physical_log.size());
+    // RAFT_LOG("snapshot from leader %d, apply state to %d, last_included %d, pysical size %ld", args.leader_id, args.last_included_idx, snapshot.last_included_idx, physical_log.size());
 
     if (role != raft_role::follower || current_term < args.term || voted_for != -1) {
         change_to(raft_role::follower, args.term);
@@ -558,7 +553,6 @@ int raft<state_machine, command>::install_snapshot(install_snapshot_args args, i
     snapshot.save(storage, args.data);
 
     /* phase2: erase physical log */
-    RAFT_LOG("in install snapshot");
     if (erase_num <= static_cast<int>(physical_log.size()) && 
         logical_log_term(args.last_included_idx) == args.last_included_term) {
         physical_log.erase(physical_log.cbegin(), 
@@ -587,7 +581,7 @@ void raft<state_machine, command>::handle_install_snapshot_reply(int target, con
     if (reply.term > current_term) {
         change_to(raft_role::follower, reply.term);
     } else if (role == raft_role::leader) {
-        RAFT_LOG("install snapshot to %d successfully, last idx %d, term %d", target, arg.last_included_idx, arg.last_included_term);
+        // RAFT_LOG("install snapshot to %d successfully, last idx %d, term %d", target, arg.last_included_idx, arg.last_included_term);
         match_idx[target] = arg.last_included_idx;
         next_idx[target] = arg.last_included_idx + 1;
     }
@@ -624,7 +618,7 @@ void raft<state_machine, command>::append_entries_wrapper(int target, append_ent
         arg.prev_log_idx = next_idx[target] - 1;
         arg.prev_log_term = logical_log_term(arg.prev_log_idx);
         arg.entries = logs_from(arg.prev_log_idx + 1);
-        RAFT_LOG("try append entries to target %d, prev_idx = %d, entries size = %ld", target, arg.prev_log_idx, arg.entries.size());
+        // RAFT_LOG("try append entries to target %d, prev_idx = %d, entries size = %ld", target, arg.prev_log_idx, arg.entries.size());
     }
     if (thread_pool->addObjJob(this, &raft::send_append_entries, target, arg) == 0) {
         RAFT_LOG("add heartbeat_task to target %d failed.", target);
@@ -729,7 +723,7 @@ void raft<state_machine, command>::run_background_commit() {
                 .leader_id = my_id,
                 .leader_commit = commit_idx
             };
-            RAFT_LOG("leader commit idx = %d", commit_idx);
+            // RAFT_LOG("leader commit idx = %d", commit_idx);
 
             for (int target = 0; target < total; ++target) {
                 if (target == my_id) continue;
@@ -773,7 +767,7 @@ void raft<state_machine, command>::run_background_apply() {
             }
         }
         for (int idx = last_applied + 1; idx <= commit_idx; ++idx) {
-            RAFT_LOG("apply log %d to state_machine, cmt_idx = %d, snapshot last_include %d", idx, commit_idx, snapshot.last_included_idx);
+            // RAFT_LOG("apply log %d to state_machine, cmt_idx = %d, snapshot last_include %d", idx, commit_idx, snapshot.last_included_idx);
             state->apply_log(logical_log_entry(idx).cmd);
         }
         last_applied = commit_idx;
@@ -900,13 +894,10 @@ std::string raft<state_machine, command>::role_str(raft_role role) {
 template<typename state_machine, typename command>
 bool raft<state_machine, command>::vaild_commit(int N, int total) {
     int cnt = 1;
-    printf("Matched index: ");
     for (int i = 0; i < total; ++i) {
         if (i == my_id) continue;
-        printf("server: %d, match_idx: %d ", i, match_idx[i]);
         if (match_idx[i] >= N) cnt++;
     }
-    printf("\n");
     return cnt > (total / 2) && logical_log_term(N) == current_term;
 }
 
