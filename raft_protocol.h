@@ -95,7 +95,11 @@ unmarshall& operator>>(unmarshall &m, append_entries_reply& reply);
 
 class install_snapshot_args {
 public:
-    // Your code here
+    int term;
+    int leader_id;
+    int last_included_idx;
+    int last_included_term;
+    std::vector<char> data;
 };
 
 marshall& operator<<(marshall &m, const install_snapshot_args& args);
@@ -104,7 +108,7 @@ unmarshall& operator>>(unmarshall &m, install_snapshot_args& args);
 
 class install_snapshot_reply {
 public:
-    // Your code here
+    int term;
 };
 
 marshall& operator<<(marshall &m, const install_snapshot_reply& reply);
