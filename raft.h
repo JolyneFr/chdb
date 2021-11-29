@@ -308,6 +308,7 @@ bool raft<state_machine, command>::is_leader(int &term) {
 template<typename state_machine, typename command>
 void raft<state_machine, command>::start() {
     // Your code here:
+    std::unique_lock<std::mutex> lock(mtx);
     
     // RAFT_LOG("start");
     last_received_RPC_time = std::chrono::system_clock::now();
