@@ -10,6 +10,8 @@
 #include <atomic>
 #include <condition_variable>
 
+typedef std::map<std::string, std::string> kv_map;
+
 class raft_command {
 public:
     virtual ~raft_command() {}
@@ -89,6 +91,10 @@ public:
     virtual std::vector<char> snapshot() override;
     // Apply the snapshot to the state mahine.
     virtual void apply_snapshot(const std::vector<char>&) override;
+
+private:
+    std::mutex mtx;
+    kv_map store;
 };
 
 #endif // raft_state_machine_h

@@ -27,6 +27,9 @@ public:
 
 	struct AskTaskResponse {
 		// Lab2: Your definition here.
+		int taskType;
+		int index;
+		string filename;
 	};
 
 	struct AskTaskRequest {
@@ -42,6 +45,21 @@ public:
 	};
 
 };
+
+marshall &operator<< (marshall &m, const mr_protocol::AskTaskResponse &resp) {
+	m << resp.taskType << resp.index << resp.filename;
+	return m;
+}
+
+unmarshall &operator>> (unmarshall &u, mr_protocol::AskTaskResponse &resp) {
+	int t, i;
+	string f;
+	u >> t >> i >> f;
+	resp.taskType = t;
+	resp.index = i;
+	resp.filename = f;
+	return u;
+}
 
 #endif
 
