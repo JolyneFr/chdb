@@ -1,0 +1,6 @@
+.vscode
+
+core
+
+*.d
+*.o
