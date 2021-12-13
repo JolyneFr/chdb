@@ -1,6 +1,8 @@
 .vscode
 
 core
+chdb_test
+raft_temp
 
 *.d
 *.o
