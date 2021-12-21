@@ -14,8 +14,8 @@ using chdb_raft_group = raft_group<chdb_state_machine, chdb_command>;
  * */
 class view_server {
 public:
-    rpc_node *node;
     shard_dispatch dispatch;            /* Dispatch requests to the target shard */
+    rpc_node *node;
     chdb_raft_group *raft_group;
 
     view_server(const int base_port,
@@ -25,12 +25,22 @@ public:
             node(new rpc_node(base_port)) {
 #if RAFT_GROUP
         raft_group = new chdb_raft_group(num_raft_nodes);
+        init_state_machine();
 #endif
     };
 
     chdb_raft *leader() const {
         int leader = this->raft_group->check_exact_one_leader();
         return this->raft_group->nodes[leader];
+    }
+
+    void init_state_machine() {
+        int size = this->raft_group->states.size();
+        for (int raft_idx = 0; raft_idx < size; ++raft_idx) {
+            auto chdb_sm = dynamic_cast<chdb_state_machine*>(this->raft_group->states[raft_idx]);
+            chdb_sm->set_rpc_node(node);
+            chdb_sm->set_dispatch(dispatch);
+        }
     }
 
 
@@ -62,8 +72,31 @@ public:
             const chdb_protocol::operation_var &var,
             int &r);
 
+    /* dispatch chdb_command when RAFT_GROUP is true: more simple */
+    int execute_command(chdb_command &cmd);
+
+    int check_can_commit(unsigned int client_idx, int tx_id, int &r);
+
+    int prepare(unsigned int client_idx, int tx_id, int &r);
+
+    int commit(unsigned int client_idx, int tx_id, int &r);
+
+    int rollback(unsigned int client_idx, int tx_id, int &r);
+
+    void release_tx_locks(int tx_id);
 
     ~view_server();
+
+private:
+    /* this is not big-lock: only used when acqiuring 2PL */
+    std::mutex global_mtx;
+    /* data structure for impl 2-Phase-Lock */
+    std::map<int, std::mutex*> key_lock;
+    std::map<int, std::vector<std::mutex*>> tx_locks;
+    std::map<std::mutex*, int> lock_tx;
+
+    /* impl Wait-Die 2-phase-lock */
+    bool try_ask_lock(int tx_id, int key);
 
 };
 
@@ -125,10 +158,9 @@ public:
         return res;
     }
 
-    view_server *vserver;
-
-    std::vector<shard_client *> shards;
     int max_tx_id;
+    view_server *vserver;
+    std::vector<shard_client *> shards;
     std::mutex tx_id_mtx;
 
 private:

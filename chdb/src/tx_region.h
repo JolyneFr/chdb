@@ -47,6 +47,9 @@ public:
      * */
     int tx_can_commit();
 
+    /* save the result of put_cmd */
+    void push_back_res(std::shared_ptr<chdb_command::result> &res);
+
     /*******************************************
      * Transaction part
      * ********************************************/
@@ -66,6 +69,16 @@ private:
      * */
     int tx_abort();
 
+    int tx_prepare();
+
+    
+
     chdb *db;
     const int tx_id;
+
+private:
+    std::map<int, int> put_cache;
+    std::vector<std::shared_ptr<chdb_command::result>> put_result;
+    int cmd_count = 0;
+    void wait_all_done();
 };

@@ -20,6 +20,7 @@ namespace chdb_protocol {
         m << var.key;
         m << var.value;
         m << var.tx_id;
+        m << var.cmd_id;
         return m;
     }
 
@@ -28,6 +29,7 @@ namespace chdb_protocol {
         u >> var.key;
         u >> var.value;
         u >> var.tx_id;
+        u >> var.cmd_id;
         return u;
     }
 

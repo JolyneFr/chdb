@@ -1,6 +1,9 @@
 #include "rpc.h"
+#include "common.h"
+#include "protocol.h"
 #include "raft_state_machine.h"
 
+using shard_dispatch = int (*)(int key, int shard_num);
 
 class chdb_command : public raft_command {
 public:
@@ -23,20 +26,20 @@ public:
 
     chdb_command();
 
-    chdb_command(command_type tp, const int &key, const int &value, const int &tx_id);
+    chdb_command(command_type tp, const int &key, const int &value, const int &tx_id, const int cmd_id);
 
     chdb_command(const chdb_command &cmd);
 
     virtual ~chdb_command() {}
 
 
-    int key, value, tx_id;
+    int key, value, tx_id, cmd_id;
     command_type cmd_tp;
     std::shared_ptr<result> res;
 
 
     virtual int size() const override {
-        return sizeof(*this);
+        return 5 * sizeof(int);
     }
 
     virtual void serialize(char *buf, int size) const override;
@@ -50,6 +53,9 @@ unmarshall &operator>>(unmarshall &u, chdb_command &cmd);
 
 class chdb_state_machine : public raft_state_machine {
 public:
+
+    using kv_map = std::map<int, int>;
+
     virtual ~chdb_state_machine() {}
 
     // Apply a log to the state machine.
@@ -65,4 +71,14 @@ public:
     // Apply the snapshot to the state mahine.
     // In Chdb, you don't need to implement this function
     virtual void apply_snapshot(const std::vector<char> &) {}
+
+    void set_rpc_node(rpc_node *node_) { this->node = node_; }
+    void set_dispatch(shard_dispatch dispatch_) { this->dispatch = dispatch_; }
+
+private:
+    std::mutex mtx;
+    kv_map store;
+    /* for impl rpc-call in raft */
+    rpc_node *node;
+    shard_dispatch dispatch;
 };

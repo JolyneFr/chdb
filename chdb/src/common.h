@@ -8,13 +8,19 @@
 #include <map>
 
 /* Macro for lab4 */
-#define RAFT_GROUP 0            /* Use raft group for view server. Enable it in part2 */
-#define BIG_LOCK 1              /* Use big lock. Please disable it to pass the last 3 (bonus) testcases */
+#define RAFT_GROUP 1            /* Use raft group for view server. Enable it in part2 */
+#define BIG_LOCK 0              /* Use big lock. Please disable it to pass the last 3 (bonus) testcases */
 
 #include "../../raft_test_utils.h"
 
 /* Other macros */
 #define CHDB_PORT 8041
+
+#define NOT_FOUND 0x114514
+#define RPC_FAIL 0x1919810
+
+/* status of execute */
+#define SHOULD_RETRY 19190817
 
 
 /**
@@ -26,6 +32,7 @@ public:
     int key;
     int new_v;
     int old_v;
+    bool is_old_empty;
 };
 
 /**
@@ -55,7 +62,7 @@ public:
         return remote_port;
     }
 
-    int port() const {
+    inline int port() const {
         return this->rpc_server->port();
     }
 
