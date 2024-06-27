@@ -27,6 +27,7 @@ namespace chdb_protocol {
         int tx_id;
         int key;
         int value;
+        int cmd_id;
     };
 
     class dummy_var {
@@ -93,4 +94,4 @@ namespace chdb_protocol {
 }
 
 
-#endif protocal_h
+#endif

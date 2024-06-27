@@ -873,7 +873,7 @@ void raft<state_machine, command>::change_to(raft_role new_role, int new_term) {
         case raft_role::leader: {
             /* initialize leader state */
             int total = num_nodes();
-            next_idx = std::vector<int>(total, last_log_idx() + 1);
+            next_idx = std::vector<int>(total, commit_idx + 1);
             match_idx = std::vector<int>(total, 0);
             break;
         }
@@ -899,7 +899,7 @@ bool raft<state_machine, command>::vaild_commit(int N, int total) {
         if (i == my_id) continue;
         if (match_idx[i] >= N) cnt++;
     }
-    return cnt > (total / 2) && logical_log_term(N) == current_term;
+    return cnt > (total / 2) /* && logical_log_term(N) == current_term */;
 }
 
 template<typename state_machine, typename command>

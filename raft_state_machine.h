@@ -10,8 +10,6 @@
 #include <atomic>
 #include <condition_variable>
 
-typedef std::map<std::string, std::string> kv_map;
-
 class raft_command {
 public:
     virtual ~raft_command() {}
@@ -24,6 +22,9 @@ public:
 
 class raft_state_machine {
 public:
+
+    using kv_map = std::map<std::string, std::string>;
+
     virtual ~raft_state_machine() {}
 
     // Apply a log to the state machine.
